@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-visual">
 <title>UNWRAP Visual Maker</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,7 +23,7 @@
 #mini{display:none}
 body{background:var(--bg);color:var(--fg);font:16px/1.5 var(--body);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 56px;
-  background-image:radial-gradient(60rem 40rem at 90% -10%,color-mix(in srgb,var(--accent) 26%,transparent),transparent 70%);background-attachment:fixed}
+  background-image:radial-gradient(60rem 40rem at 90% -10%,color-mix(in srgb,var(--accent) 26%,transparent),transparent 70%);}
 .wrap{max-width:1140px;margin:0 auto;display:grid;gap:24px}
 nav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:16px;border-bottom:1px solid var(--line)}
 nav img{height:24px;width:auto;display:block}
@@ -91,7 +91,7 @@ details.more[open] summary::before{content:"\2212"}
 .preview{position:sticky;top:16px}
 .stage{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:14px;display:grid;gap:10px}
 .canvas-wrap{position:relative}
-canvas#c{width:100%;height:auto;display:block;border-radius:10px;touch-action:none;max-height:80vh;object-fit:contain}
+canvas#c{width:100%;height:auto;display:block;border-radius:10px;touch-action:none;max-height:calc(var(--vh0, 9px) * 80);object-fit:contain}
 .has-photo canvas#c{cursor:grab}
 canvas#c.drag{cursor:grabbing}
 .addphoto{position:absolute;inset:0;display:grid;place-items:center;cursor:pointer;text-transform:none;letter-spacing:0;color:#fff}
@@ -102,7 +102,7 @@ canvas#c.drag{cursor:grabbing}
 @media (max-width:860px){
   .studio{grid-template-columns:1fr;gap:16px}
   .preview{order:-1;position:static}
-  canvas#c{max-height:55vh;margin:0 auto;width:auto;max-width:100%}
+  canvas#c{max-height:calc(var(--vh0, 9px) * 55);margin:0 auto;width:auto;max-width:100%}
   .hero p{font-size:15px}
   .thumb{display:block}
   .thumb img{width:100%;border-radius:10px;display:block;border:1px solid var(--line)}
@@ -373,6 +373,13 @@ canvas#c.drag{cursor:grabbing}
     scheduleBlob();
   }
 
+
+  // ---------- stable viewport unit: Firefox on Android shrinks vh when the keyboard opens ----------
+  function setVh(){ document.documentElement.style.setProperty("--vh0", (window.innerHeight / 100) + "px"); }
+  setVh();
+  let lastW = window.innerWidth;
+  window.addEventListener("resize", () => { if (Math.abs(window.innerWidth - lastW) > 40){ lastW = window.innerWidth; setVh(); } });
+  window.addEventListener("orientationchange", () => setTimeout(setVh, 300));
 
   // ---------- small UI helpers ----------
   const status = (msg) => { $("photoStatus").textContent = msg; };
