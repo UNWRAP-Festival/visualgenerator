@@ -20,6 +20,7 @@
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
+#mini{display:none}
 body{background:var(--bg);color:var(--fg);font:16px/1.5 var(--body);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 56px;
   background-image:radial-gradient(60rem 40rem at 90% -10%,color-mix(in srgb,var(--accent) 26%,transparent),transparent 70%);background-attachment:fixed}
@@ -106,9 +107,8 @@ canvas#c.drag{cursor:grabbing}
   .thumb{display:block}
   .thumb img{width:100%;border-radius:10px;display:block;border:1px solid var(--line)}
   /* while typing: the preview becomes a small live thumbnail in the top-right corner */
-  body.typing .preview .stage{position:fixed;z-index:30;top:calc(env(safe-area-inset-top,0px) + 8px);right:max(8px,env(safe-area-inset-right,0px));width:78px;padding:0;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.55);border-color:rgba(255,255,255,.35);overflow:hidden;gap:0}
-  body.typing canvas#c{max-height:none;width:100%;border-radius:0}
-  body.typing .zoom,body.typing .addphoto{display:none}
+  #mini{position:fixed;z-index:30;top:calc(env(safe-area-inset-top,0px) + 8px);right:max(8px,env(safe-area-inset-right,0px));width:78px;height:auto;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.35);pointer-events:none}
+  body.typing #mini{display:block}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style>
@@ -116,6 +116,7 @@ canvas#c.drag{cursor:grabbing}
 <body>
 
 
+<canvas id="mini" width="156" height="195" aria-hidden="true"></canvas>
 <div class="wrap">
   <nav><img id="navLogo" alt="UNWRAP"><span>Visual maker</span></nav>
 
@@ -413,7 +414,6 @@ canvas#c.drag{cursor:grabbing}
   // ---------- drag + zoom ----------
   let drag = null;
   c.addEventListener("pointerdown", e => {
-    if (document.body.classList.contains("typing")) { document.activeElement?.blur(); return; }
     if (!S.img) return; drag = { x:e.clientX, y:e.clientY, ox:S.ox, oy:S.oy }; c.setPointerCapture(e.pointerId); c.classList.add("drag");
   });
   c.addEventListener("pointermove", e => {
@@ -427,20 +427,23 @@ canvas#c.drag{cursor:grabbing}
   c.addEventListener("pointerup", end); c.addEventListener("pointercancel", end);
   $("zoom").oninput = e => { S.zoom = +e.target.value; draw(); };
 
-  // ---------- phone: shrink the preview while typing ----------
+  // ---------- phone: small live thumbnail while typing (no layout change, so the keyboard opens normally) ----------
+  const mini = $("mini"), mctx = mini.getContext("2d");
+  function drawMini(){
+    if (!document.body.classList.contains("typing")) return;
+    const h = Math.round(mini.width * c.height / c.width);
+    if (mini.height !== h) mini.height = h;
+    mctx.drawImage(c, 0, 0, mini.width, h);
+  }
   let blurTimer;
   document.addEventListener("focusin", e => {
     if (!isPhone() || !e.target.matches("input[type=text], textarea")) return;
-    clearTimeout(blurTimer);
-    if (!document.body.classList.contains("typing")){
-      document.body.classList.add("typing");
-      setTimeout(() => e.target.scrollIntoView({ block:"center", behavior:"smooth" }), 60);
-    }
+    clearTimeout(blurTimer); document.body.classList.add("typing"); drawMini();
   });
   document.addEventListener("focusout", () => { blurTimer = setTimeout(() => {
     const a = document.activeElement;
     if (!(a && a.matches && a.matches("input[type=text], textarea"))) document.body.classList.remove("typing");
-  }, 120); });
+  }, 150); });
 
   // ---------- headline chips ----------
   const chips = $("chips"), quote = $("quote");
@@ -488,6 +491,7 @@ canvas#c.drag{cursor:grabbing}
   // ---------- image blob, rendered ahead so sharing stays inside the tap ----------
   let blobCache = null, blobTimer = null, thumbTimer = null;
   function scheduleBlob(){
+    drawMini();
     blobCache = null; clearTimeout(blobTimer);
     blobTimer = setTimeout(() => c.toBlob(b => { blobCache = b; }, "image/png"), 250);
     clearTimeout(thumbTimer);
